@@ -3,7 +3,7 @@ const fs = require('fs');
 const https = require('https');
 const history = require('connect-history-api-fallback');
 const express = require('express');
-const redirectToHTTPS = require('express-http-to-https');
+const redirectToHTTPS = require('express-http-to-https').redirectToHTTPS;
 const ws = require('ws');
 
 const app = express();
