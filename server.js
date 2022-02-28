@@ -91,7 +91,7 @@ app.post('/api/register', (req, res) => {
 });
 
 app.post('/api/login', csrfProtection, (req, res) => {
-    const reqUsername, reqPassword;
+    let reqUsername, reqPassword;
     try {
         reqUsername = req.body.username;
         reqPassword = req.body.password;
