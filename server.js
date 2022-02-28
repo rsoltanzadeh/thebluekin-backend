@@ -74,7 +74,7 @@ app.post('/api/register', (req, res) => {
         return;
     }
 
-    connection.query('SELECT id FROM user WHERE username = ?', [reqUsername], (error, results, fields) => {
+    connection.query('SELECT id FROM user WHERE username = ?', [reqUsername], function(error, results, fields) {
         if (error) {
             throw error;
         }
@@ -84,7 +84,7 @@ app.post('/api/register', (req, res) => {
             return;
         }
     });
-    connection.query('SELECT id FROM user WHERE email = ?', [reqEmail], (error, results, fields) => {
+    connection.query('SELECT id FROM user WHERE email = ?', [reqEmail], function(error, results, fields) {
         if (error) {
             throw error;
         }
@@ -96,7 +96,7 @@ app.post('/api/register', (req, res) => {
     });
 
     newPasword = phpPassword.hash(sensitiveData.dbPepper + reqPassword);
-    connection.query('INSERT INTO user (username, email, password) VALUES (?,?,?)', [reqUsername, reqEmail, newPassword], (error, results, fields) => {
+    connection.query('INSERT INTO user (username, email, password) VALUES (?,?,?)', [reqUsername, reqEmail, newPassword], function(error, results, fields) {
         if (error) {
             throw error;
         }
@@ -114,21 +114,21 @@ app.post('/api/login', csrfProtection, (req, res) => {
         res.send("Received data in invalid format.");
         return;
     }
-    connection.query('SELECT username, password FROM user WHERE username = ?', [reqUsername], (error, results, fields) => {
+    connection.query('SELECT username, password FROM user WHERE username = ?', [reqUsername], function(error, results, fields) {
         if (error) {
             throw error;
         }
         if (results.length > 1) {
             throw `Duplicate entry for username ${reqUsername}.`;
         } else if (results.length == 0) {
-            connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], (error, results, fields) => {
+            connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function(error, results, fields) {
                 if (error) {
                     throw error;
                 }
             });
         } else {
             if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, results[1])) {
-                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], (error, results, fields) => {
+                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function(error, results, fields) {
                     if (error) {
                         throw error;
                     }
