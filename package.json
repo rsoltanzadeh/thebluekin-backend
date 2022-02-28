@@ -13,12 +13,13 @@
   "author": "Ramin Soltanzadeh",
   "license": "ISC",
   "dependencies": {
-    "connect-history-api-fallback": "^1.6.0",
+    "csurf": "^1.11.0",
+    "email-validator": "^2.0.4",
     "express": "^4.17.3",
-    "express-http-to-https": "^1.1.4",
+    "express-session": "^1.17.2",
     "fs": "^0.0.1-security",
-    "https": "^1.0.0",
-    "url": "^0.11.0",
+    "mysql": "^2.18.1",
+    "node-php-password": "^0.1.2",
     "ws": "^8.5.0"
   }
 }
