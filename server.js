@@ -116,6 +116,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
     }
     connection.query('SELECT username, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
         if (error) {
+            console.log('f');
             throw error;
         }
         if (results.length > 1) {
@@ -123,6 +124,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
         } else if (results.length == 0) {
             connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
                 if (error) {
+                    console.log('d');
                     throw error;
                 }
             });
@@ -130,12 +132,14 @@ app.post('/api/login', csrfProtection, (req, res) => {
             if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, results[1])) {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error, results, fields) {
                     if (error) {
+                        console.log('a');
                         throw error;
                     }
 
                     // prevent session fixation attack
                     req.session.regenerate(err => {
                         if (err) {
+                            console.log('b');
                             throw err;
                         }
                     })
@@ -145,6 +149,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
             } else {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], (error, results, fields) => {
                     if (error) {
+                        console.log('c');
                         throw error;
                     }
                 })
