@@ -15,7 +15,8 @@ const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 
 let options = {
     key: sensitiveData.keyPath,
-    cert: sensitiveData.certPath
+    cert: sensitiveData.certPath,
+    ca: [sensitiveData.chain]
 };
 
 const chatServer = new ws.WebSocketServer({ noServer: true });
