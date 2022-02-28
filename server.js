@@ -5,11 +5,13 @@ const fs = require('fs');
 const mysql = require('mysql');
 const phpPassword = require('node-php-password');
 const validator = require('email-validator');
+const { exit } = require('process');
 const app = express();
 const csrfProtection = csrf();
 
 const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 const connection = mysql.createConnection({
+    socketPath: '/var/lib/mysql/mysql.sock',
     host: 'localhost',
     user: sensitiveData.dbUsername,
     password: sensitiveData.dbPassword,
