@@ -11,12 +11,15 @@ app.use(redirectToHTTPS([/localhost:(\d{4})/], [], 301));
 app.use(express.static('/var/www/thebluekin.com/html'));
 app.use(history());
 
-const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json')); 
+const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
+const key = fs.readFileSync(sensitiveData.keyPath);
+const cert = fs.readFileSync(sensitiveData.certPath);
+const ca = fs.readFileSync(sensitiveData.chain);
 
 let options = {
-    key: sensitiveData.keyPath,
-    cert: sensitiveData.certPath,
-    ca: [sensitiveData.chain]
+    key: key
+    cert: cert,
+    ca: [ca]
 };
 
 const chatServer = new ws.WebSocketServer({ noServer: true });
