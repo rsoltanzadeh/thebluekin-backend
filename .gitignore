@@ -1,0 +1,9 @@
+# emacs files
+
+*~
+\#*\#
+.\#*\#
+
+# node
+
+node_modules/
