@@ -16,6 +16,8 @@ const connection = mysql.createConnection({
     database: 'mafia'
 });
 
+connection.connect();
+
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(session({
