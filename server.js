@@ -33,7 +33,9 @@ app.use(session({
         secure: true
     },
     secret: 'test secret',
-    proxy: true
+    proxy: true,
+    resave: false,
+    saveUninitialized: false
 }));
 
 app.get('/api/get-token', csrfProtection, (req, res) => {
