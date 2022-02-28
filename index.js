@@ -14,7 +14,7 @@ app.use(history());
 const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 const key = fs.readFileSync(sensitiveData.keyPath);
 const cert = fs.readFileSync(sensitiveData.certPath);
-const ca = fs.readFileSync(sensitiveData.chain);
+const ca = fs.readFileSync(sensitiveData.chainPath);
 
 let options = {
     key: key,
