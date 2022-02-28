@@ -17,7 +17,7 @@ const cert = fs.readFileSync(sensitiveData.certPath);
 const ca = fs.readFileSync(sensitiveData.chain);
 
 let options = {
-    key: key
+    key: key,
     cert: cert,
     ca: [ca]
 };
