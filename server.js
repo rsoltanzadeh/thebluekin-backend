@@ -29,7 +29,7 @@ app.get('/api/get-token', csrfProtection, (req, res) => {
 });
 
 app.post('/api/register', (req, res) => {
-    const reqUsername, reqPassword, reqEmail;
+    let reqUsername, reqPassword, reqEmail;
     try {
         reqUsername = req.body.username;
         reqPassword = req.body.password;
