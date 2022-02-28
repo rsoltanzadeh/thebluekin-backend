@@ -46,13 +46,13 @@ app.post('/api/register', (req, res) => {
     } else if (reqPassword.length < 1) {
         res.send('Password is too short.');
         return;
-    } else if reqUsername.length > 20) {
+    } else if (reqUsername.length > 20) {
         res.send('Username is too long. (Maximum 20 characters)');
         return;
-    } else if reqPassword.length > 1024) {
+    } else if (reqPassword.length > 1024) {
         res.send('Password is too long. (Maximum 1024 characters)');
         return;
-    } else if reqEmail.length > 255) {
+    } else if (reqEmail.length > 255) {
         res.send('Email address is too long. (Maximum 255 characters)');
         return;
     } else if (!validator.validate(reqEmail)) {
@@ -83,7 +83,7 @@ app.post('/api/register', (req, res) => {
 
     newPasword = phpPassword.hash(sensitiveData.dbPepper + reqPassword);
     connection.query('INSERT INTO user (username, email, password) VALUES (?,?,?)', [reqUsername, reqEmail, newPassword], (error, results, fields) => {
-        if(error) {
+        if (error) {
             throw error;
         }
         res.send("success");
