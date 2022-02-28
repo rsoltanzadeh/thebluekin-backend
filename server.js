@@ -16,7 +16,13 @@ const connection = mysql.createConnection({
     database: 'mafia'
 });
 
-connection.connect();
+connection.connect(err => {
+    if(err) {
+        console.log("Connection failed: " + err);
+    } else {
+        console.log("Connection succeeded!");
+    }
+});
 
 app.set('trust proxy', 1);
 app.use(express.json());
