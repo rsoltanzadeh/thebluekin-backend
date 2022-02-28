@@ -125,7 +125,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
                 }
             });
         } else {
-            if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, password)) {
+            if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, results[1])) {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], (error, results, fields) => {
                     if (error) {
                         throw error;
