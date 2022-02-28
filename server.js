@@ -22,7 +22,8 @@ app.use(session({
     cookie: {
         secure: true
     },
-    secret: 'test secret'
+    secret: 'test secret',
+    proxy: true
 }));
 
 app.get('/api/get-token', csrfProtection, (req, res) => {
