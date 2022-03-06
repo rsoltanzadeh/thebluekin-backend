@@ -151,7 +151,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
                     res.send("success");
                 })
             } else {
-                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], queryCallback(error, results, fields) {
+                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
                     console.log(5);
                     if(error) {
                         console.log('c');
