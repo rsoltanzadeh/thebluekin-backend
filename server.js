@@ -19,7 +19,7 @@ const connection = mysql.createConnection({
 });
 
 connection.connect(err => {
-    if(err) {
+    if (err) {
         console.log("Connection failed: " + err);
     } else {
         console.log("Connection succeeded!");
@@ -105,6 +105,7 @@ app.post('/api/register', (req, res) => {
 });
 
 app.post('/api/login', csrfProtection, (req, res) => {
+    console.log(1);
     let reqUsername, reqPassword;
     try {
         reqUsername = req.body.username;
@@ -115,6 +116,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
         return;
     }
     connection.query('SELECT username, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
+        console.log(2);
         if (error) {
             console.log('f');
             throw error;
@@ -123,6 +125,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
             throw `Duplicate entry for username ${reqUsername}.`;
         } else if (results.length == 0) {
             connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
+                console.log(3);
                 if (error) {
                     console.log('d');
                     throw error;
@@ -131,6 +134,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
         } else {
             if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, results[1])) {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error, results, fields) {
+                    console.log(4);
                     if (error) {
                         console.log('a');
                         throw error;
@@ -147,12 +151,13 @@ app.post('/api/login', csrfProtection, (req, res) => {
                     res.send("success");
                 })
             } else {
-                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], (error, results, fields) => {
-                    if (error) {
+                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], queryCallback(error, results, fields) {
+                    console.log(5);
+                    if(error) {
                         console.log('c');
                         throw error;
                     }
-                })
+                });
             }
         }
     });
