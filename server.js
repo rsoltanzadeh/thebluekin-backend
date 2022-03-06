@@ -153,6 +153,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
                     res.send("success");
                 })
             } else {
+                console.log(phpPassword.hash(sensitiveData.dbPepper + reqPassword));
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
                     console.log(5);
                     if(error) {
