@@ -132,7 +132,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
                 }
             });
         } else {
-            console.log("Results: " + results);
+            console.log("Results: " + JSON.stringify(results));
             let passwordHash = results[1].replace('$2y', '$2a');
             if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, passwordHash)) {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error, results, fields) {
