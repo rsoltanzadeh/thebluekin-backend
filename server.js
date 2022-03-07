@@ -95,7 +95,7 @@ app.post('/api/register', (req, res) => {
         }
     });
 
-    let newPasword = phpPassword.hash(sensitiveData.dbPepper + reqPassword);
+    let newPassword = phpPassword.hash(sensitiveData.dbPepper + reqPassword);
     connection.query('INSERT INTO user (username, email, password) VALUES (?,?,?)', [reqUsername, reqEmail, newPassword], function queryCallback(error, results, fields) {
         if (error) {
             throw error;
