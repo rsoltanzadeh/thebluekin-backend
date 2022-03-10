@@ -6,23 +6,24 @@ const mysql = require('mysql');
 const phpPassword = require('node-php-password');
 const validator = require('email-validator');
 const { exit } = require('process');
+const jwt = require('jsonwebtoken');
 const app = express();
 const csrfProtection = csrf();
 
+const privateKeyRS256 = fs.readFileSync('../jwtRS256.key');
 const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 const connection = mysql.createConnection({
     socketPath: '/var/lib/mysql/mysql.sock',
     host: 'localhost',
     user: sensitiveData.dbUsername,
     password: sensitiveData.dbPassword,
-    database: 'mafia'
+    database: 'mafia',
+    charset: 'utf8mb4'
 });
 
 connection.connect(err => {
     if (err) {
-        console.log("Connection failed: " + err);
-    } else {
-        console.log("Connection succeeded!");
+        console.log("MySQL connection failed: " + err);
     }
 });
 
@@ -40,6 +41,24 @@ app.use(session({
 
 app.get('/api/get-token', csrfProtection, (req, res) => {
     res.send(req.csrfToken());
+});
+
+app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
+    if (!req.session.username) {
+        res.send("Unauthorized.");
+        return;
+    }
+
+    const token = jwt.sign(
+        {
+            "sub": req.session.username,
+            "aud": "chat",
+            "exp": Date.now() / 1000 + 30, // expires in 30 seconds
+            "iat": Date.now() / 1000
+        },
+        privateKeyRS256
+    );
+    res.send(JSON.stringify(token));
 });
 
 app.post('/api/register', (req, res) => {
@@ -106,14 +125,14 @@ app.post('/api/register', (req, res) => {
 
 app.post('/api/login', csrfProtection, (req, res) => {
     let reqUsername, reqPassword;
-    try {
-        reqUsername = req.body.username;
-        reqPassword = req.body.password;
-    } catch (e) {
+    reqUsername = req.body.username;
+    reqPassword = req.body.password;
+    if (!reqUsername || !reqPassword) {
         console.log(e);
-        res.send("Received data in invalid format.");
+        res.send("Received data in invalid format: " + JSON.stringify(req.body));
         return;
     }
+
     connection.query('SELECT username, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
         if (error) {
             console.log('f');
@@ -147,13 +166,13 @@ app.post('/api/login', csrfProtection, (req, res) => {
                             throw err;
                         }
                     })
-
+                    req.session.username = reqUsername;
                     res.send("success");
                 })
             } else {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
                     console.log(`Login failed for username ${reqUsername}.`);
-                    if(error) {
+                    if (error) {
                         console.log('c');
                         throw error;
                     }
