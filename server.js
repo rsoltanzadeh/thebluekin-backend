@@ -142,22 +142,22 @@ app.post('/api/login', csrfProtection, (req, res) => {
         if (results.length > 1) {
             throw `Duplicate entry for username ${reqUsername}.`;
         } else if (results.length == 0) {
-            connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
+            connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error2, results2, fields2) {
                 console.log(`Login failed for username ${reqUsername}.`);
-                if (error) {
+                if (error2) {
                     console.log('d');
-                    throw error;
+                    throw error2;
                 }
             });
         } else {
             console.log("Results: " + JSON.stringify(results));
             let passwordHash = results[0].password;
             if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, passwordHash)) {
-                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error, results, fields) {
+                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error2, results2, fields2) {
                     console.log(`Login succeeded for user ${reqUsername}.`);
-                    if (error) {
+                    if (error2) {
                         console.log('a');
-                        throw error;
+                        throw error2;
                     }
 
                     // prevent session fixation attack
