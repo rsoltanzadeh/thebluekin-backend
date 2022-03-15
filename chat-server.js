@@ -271,18 +271,28 @@ async function removeFoe(userId, foeName) {
 
 async function addFriend(userId, friendName) {
     const query = `INSERT INTO friendship (user_id, friend_id)
-    SELECT ?, id
-    FROM user
-    WHERE username = ?;`
+    VALUES (
+        ?,
+        (
+            SELECT id
+            FROM user
+            WHERE username = ?
+        ) 
+    );`
     const [results, fields] = await connection.query(query, [userId, friendName]);
     return true;
 }
 
 async function addFoe(userId, foeName) {
     const query = `INSERT INTO foeship (user_id, foe_id)
-    SELECT ?, id
-    FROM user
-    WHERE username = ?;`
+    VALUES (
+        ?,
+        (
+            SELECT id
+            FROM user
+            WHERE username = ?
+        ) 
+    );`
     const [results, fields] = await connection.query(query, [userId, foeName]);
     return true;
 }
