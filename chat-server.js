@@ -279,7 +279,7 @@ async function removeFoe(userId, foeName) {
 }
 
 async function addFriend(userId, friendName) {
-    if(friendName in getFriends(userId)) {
+    if((await getFriends(userId)).includes(friendName) || (await getId(friendName)) == userId) {
         return;
     }
     removeFoe(userId, friendName);
@@ -297,7 +297,7 @@ async function addFriend(userId, friendName) {
 }
 
 async function addFoe(userId, foeName) {
-    if(foeName in getFoes(userId)) {
+    if((await getFoes(userId)).includes(foeName) || (await getId(foeName)) == userId) {
         return;
     }
     removeFriend(userId, foeName);
