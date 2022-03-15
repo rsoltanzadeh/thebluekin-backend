@@ -227,7 +227,7 @@ async function getId(username) {
     FROM user
     WHERE username = ?;`;
     const [results, fields] = await connection.execute(query, [username]);
-    return results[0];
+    return results[0].id;
 }
 
 async function getFriends(userId) {
