@@ -1,6 +1,7 @@
 const ws = require('ws');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const mysql = require('mysql');
 const session = require('express-session');
 
 const MessageTypes = {
@@ -18,7 +19,8 @@ const ResponseTypes = {
     FRIENDS: 2,
     FOES: 3,
     ONLINE_PEOPLE: 4,
-    ERROR: 5
+    CHAT_HISTORY: 5,
+    ERROR: 6
 };
 const chatServer = new ws.WebSocketServer({
     port: 3001,
@@ -33,7 +35,8 @@ const connection = mysql.createConnection({
     host: 'localhost',
     user: sensitiveData.dbUsername,
     password: sensitiveData.dbPassword,
-    database: 'mafia'
+    database: 'mafia',
+    charset: 'utf8mb4'
 });
 
 connection.connect(err => {
@@ -67,9 +70,11 @@ chatServer.on('connection', (ws, req) => {
                 try {
                     const payload = jwt.verify(message.payload, publicKeyRS256);
                     userState.authenticated = true;
-                    userState.name = payload.sub;
+                    userState.id = payload.sub;
+                    userState.name = payload.username;
                     userState.friends = getFriends(userState.name);
                     userState.foes = getFoes(userState.name);
+                    userState.chatHistory = getChatHistory(userState.name);
                     ws.send(JSON.stringify({
                         "type": ResponseTypes.FRIENDS,
                         "payload": userState.friends
@@ -78,8 +83,10 @@ chatServer.on('connection', (ws, req) => {
                         "type": ResponseTypes.FOES,
                         "payload": userState.foes
                     }));
-
-
+                    ws.send(JSON.stringify({
+                        "type": ResponseTypes.CHAT_HISTORY,
+                        "payload": userState.chatHistory
+                    }));
                 } catch (err) {
                     console.log(err);
                 }
@@ -88,10 +95,16 @@ chatServer.on('connection', (ws, req) => {
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to send message while unauthenticated.");
                 } else {
-                    ws.send(JSON.stringify({
-                        "type": ResponseTypes.MESSAGE,
-                        "payload": message.payload
-                    }));
+                    const recipient = message.payload.recipient;
+                    const text = message.payload.text;
+                    sessions.forEach(state => {
+                        if (state.name == recipient) {
+                            ws.send(JSON.stringify({
+                                "type": ResponseTypes.MESSAGE,
+                                "payload": text
+                            }));
+                        }
+                    });
                 }
                 break;
             case MessageTypes.ADD_FRIEND:
@@ -201,26 +214,105 @@ chatServer.on('close', () => {
     clearInterval(interval);
 });
 
-function getFriends(user) {
+function getFriends(userId) {
+    const query = `SELECT username
+    FROM user
+    INNER JOIN friendship
+        ON friendship.friend_id = user.id
+    WHERE friendship.user_id = ?`;
+    connection.query(query, [user], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
+
+        return results[0]
+    });
+}
+
+function getFoes(userId) {
+    const query = `SELECT username
+    FROM user
+    INNER JOIN foeship
+        ON foeship.foe_id = user.id
+    WHERE foe.user_id = ?`;
+    connection.query(query, [user], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
+
+        return results[0]
+    });
+}
+
+function getChatHistory(userId) {
+    const query = `SELECT sender_id, recipient_id, date
+    FROM chat_message
+    WHERE sender_id = ? OR recipient_id = ?`;
+    connection.query(query, [userId, userId], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
+
+        return results[0]
+    });
+}
+
+function removeFriend(userId, friendName) {
+    const query = `DELETE friendship 
+    FROM friendship
+    INNER JOIN user
+        ON friendship.friend_id = user.id
+    WHERE friendship.user_id = ? AND user.username = ?`;
+    connection.query(query, [userId, friendName], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
+
+        return true;
+    });
 
 }
 
-function getFoes(user) {
+function removeFoe(userId, foeName) {
+    const query = `DELETE foeship 
+    FROM foeship
+    INNER JOIN user
+        ON foeship.foe_id = user.id
+    WHERE foeship.user_id = ? AND user.username = ?`;
+    connection.query(query, [userId, foeName], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
+
+        return true;
+    });
 
 }
 
-function removeFriend(user, friend) {
+function addFriend(userId, friendName) {
+    const query = `INSERT INTO friendship (user_id, friend_id)
+    SELECT ?, id
+    FROM user
+    WHERE username = ?;`
+    connection.query(query, [userId, friendName], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
 
+        return true;
+    });
 }
 
-function removeFoe(user, foe) {
+function addFoe(userId, foeName) {
+    const query = `INSERT INTO foeship (user_id, foe_id)
+    SELECT ?, id
+    FROM user
+    WHERE username = ?;`
+    connection.query(query, [userId, foeName], function queryCallback(error, results, fields) {
+        if (error) {
+            throw error;
+        }
 
-}
-
-function addFriend(user, friend) {
-
-}
-
-function addFoe(user, foe) {
-
+        return true;
+    });
 }

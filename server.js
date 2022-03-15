@@ -51,7 +51,8 @@ app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
 
     const token = jwt.sign(
         {
-            "sub": req.session.username,
+            "sub": req.session.id,
+            "username": req.session.username,
             "aud": "chat",
             "exp": Date.now() / 1000 + 30, // expires in 30 seconds
             "iat": Date.now() / 1000
@@ -133,7 +134,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
         return;
     }
 
-    connection.query('SELECT username, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
+    connection.query('SELECT id, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
         if (error) {
             console.log('f');
             throw error;
@@ -167,6 +168,7 @@ app.post('/api/login', csrfProtection, (req, res) => {
                         }
                     })
                     req.session.username = reqUsername;
+                    req.session.userid = results[0].id;
                     res.send("success");
                 })
             } else {
