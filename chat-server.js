@@ -29,20 +29,24 @@ const chatServer = new ws.WebSocketServer({
 const publicKeyRS256 = fs.readFileSync('../jwtRS256.key.pub');
 const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 
-const connection = await mysql.createConnection({
-    socketPath: '/var/lib/mysql/mysql.sock',
-    host: 'localhost',
-    user: sensitiveData.dbUsername,
-    password: sensitiveData.dbPassword,
-    database: 'mafia',
-    charset: 'utf8mb4'
-});
+let connection;
 
-connection.connect(err => {
-    if (err) {
-        console.log("MySQL connection failed: " + err);
-    }
-});
+(async () => {
+    connection = await mysql.createConnection({
+        socketPath: '/var/lib/mysql/mysql.sock',
+        host: 'localhost',
+        user: sensitiveData.dbUsername,
+        password: sensitiveData.dbPassword,
+        database: 'mafia',
+        charset: 'utf8mb4'
+    });
+
+    connection.connect(err => {
+        if (err) {
+            console.log("MySQL connection failed: " + err);
+        }
+    });
+})();
 
 function heartbeat() {
     this.isAlive = true;
