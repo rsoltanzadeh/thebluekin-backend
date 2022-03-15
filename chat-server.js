@@ -217,8 +217,11 @@ function getFriends(userId) {
         if (error) {
             throw error;
         }
-
-        return results[0]
+        let friends = []
+        results.forEach(row => {
+            friends.push(row.username);
+        });
+        return friends;
     });
 }
 
@@ -232,8 +235,11 @@ function getFoes(userId) {
         if (error) {
             throw error;
         }
-
-        return results[0]
+        let foes = []
+        results.forEach(row => {
+            foes.push(row.username);
+        });
+        return foes;
     });
 }
 
