@@ -69,7 +69,7 @@ chatServer.on('connection', (ws, req) => {
             "authenticated": false
         }
     );
-    ws.on('message', data => {
+    ws.on('message', async data => {
         console.log('Received: %s', data);
         let userState = sessions.get(ws);
         let message = JSON.parse(data);
@@ -80,8 +80,8 @@ chatServer.on('connection', (ws, req) => {
                     userState.authenticated = true;
                     userState.id = payload.sub;
                     userState.name = payload.username;
-                    userState.friends = getFriends(userState.id);
-                    userState.foes = getFoes(userState.id);
+                    userState.friends = await getFriends(userState.id);
+                    userState.foes = await getFoes(userState.id);
                     console.log(`User state: ${JSON.stringify(userState)}`);
                     ws.send(JSON.stringify({
                         "type": responseTypes.FRIENDS,
@@ -116,9 +116,9 @@ chatServer.on('connection', (ws, req) => {
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to add friend while unauthenticated.");
                 } else {
-                    let success = addFriend(userState.id, message.payload);
+                    let success = await addFriend(userState.id, message.payload);
                     if (success) {
-                        userState.friends = getFriends(userState.id);
+                        userState.friends = await getFriends(userState.id);
                         ws.send(JSON.stringify({
                             "type": responseTypes.FRIENDS,
                             "payload": userState.friends
@@ -135,9 +135,9 @@ chatServer.on('connection', (ws, req) => {
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to add foe while unauthenticated.");
                 } else {
-                    let success = addFoe(userState.id, message.payload);
+                    let success = await addFoe(userState.id, message.payload);
                     if (success) {
-                        userState.foes = getFoes(userState.id);
+                        userState.foes = await getFoes(userState.id);
                         ws.send(JSON.stringify({
                             "type": responseTypes.FOES,
                             "payload": userState.foes
@@ -154,9 +154,9 @@ chatServer.on('connection', (ws, req) => {
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to remove friend while unauthenticated.");
                 } else {
-                    let success = removeFriend(userState.id, message.payload);
+                    let success = await removeFriend(userState.id, message.payload);
                     if (success) {
-                        userState.friends = getFriends(userState.id);
+                        userState.friends = await getFriends(userState.id);
                         ws.send(JSON.stringify({
                             "type": responseTypes.FRIENDS,
                             "payload": userState.friends
@@ -173,9 +173,9 @@ chatServer.on('connection', (ws, req) => {
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to remove foe while unauthenticated.");
                 } else {
-                    let success = removeFoe(userState.id, message.payload);
+                    let success = await removeFoe(userState.id, message.payload);
                     if (success) {
-                        userState.foes = getFoes(userState.id);
+                        userState.foes = await getFoes(userState.id);
                         ws.send(JSON.stringify({
                             "type": responseTypes.FOES,
                             "payload": userState.foes
