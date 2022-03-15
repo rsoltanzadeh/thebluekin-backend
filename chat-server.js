@@ -279,6 +279,10 @@ async function removeFoe(userId, foeName) {
 }
 
 async function addFriend(userId, friendName) {
+    if(friendName in getFriends(userId)) {
+        return;
+    }
+    removeFoe(userId, friendName);
     const query = `INSERT INTO friendship (user_id, friend_id)
     VALUES (
         ?,
@@ -293,6 +297,10 @@ async function addFriend(userId, friendName) {
 }
 
 async function addFoe(userId, foeName) {
+    if(foeName in getFoes(userId)) {
+        return;
+    }
+    removeFriend(userId, foeName);
     const query = `INSERT INTO foeship (user_id, foe_id)
     VALUES (
         ?,
