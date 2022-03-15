@@ -78,7 +78,7 @@ chatServer.on('connection', (ws, req) => {
                     userState.name = payload.username;
                     userState.friends = getFriends(userState.id);
                     userState.foes = getFoes(userState.id);
-                    console.log(`User state: ${userState}`);
+                    console.log(`User state: ${JSON.stringify(userState)}`);
                     ws.send(JSON.stringify({
                         "type": responseTypes.FRIENDS,
                         "payload": userState.friends
