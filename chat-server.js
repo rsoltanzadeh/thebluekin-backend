@@ -1,7 +1,7 @@
 const ws = require('ws');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
-const mysql = require('mysql');
+const mysql = require('mysql2/promise');
 const session = require('express-session');
 
 const messageTypes = {
@@ -29,15 +29,17 @@ const chatServer = new ws.WebSocketServer({
 const publicKeyRS256 = fs.readFileSync('../jwtRS256.key.pub');
 const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 
-const connection = mysql.createConnection({
-    socketPath: '/var/lib/mysql/mysql.sock',
-    host: 'localhost',
-    user: sensitiveData.dbUsername,
-    password: sensitiveData.dbPassword,
-    database: 'mafia',
-    charset: 'utf8mb4'
-});
-
+let connection;
+(async () => {
+    connection = await mysql.createConnection({
+        socketPath: '/var/lib/mysql/mysql.sock',
+        host: 'localhost',
+        user: sensitiveData.dbUsername,
+        password: sensitiveData.dbPassword,
+        database: 'mafia',
+        charset: 'utf8mb4'
+    });
+})();
 connection.connect(err => {
     if (err) {
         console.log("MySQL connection failed: " + err);
@@ -217,98 +219,68 @@ chatServer.on('close', () => {
     clearInterval(interval);
 });
 
-function getFriends(userId) {
+async function getFriends(userId) {
     const query = `SELECT username
     FROM user
     INNER JOIN friendship
         ON friendship.friend_id = user.id
     WHERE friendship.user_id = ?`;
-    connection.query(query, [userId], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-        let friends = [];
-        results.forEach(row => {
-            friends.push(row.username);
-        });
-        return friends;
+    const [results, fields] = await connection.execute(query, [userId]);
+    let friends = [];
+    results.forEach(row => {
+        friends.push(row.username);
     });
+    return friends;
 }
 
-function getFoes(userId) {
+async function getFoes(userId) {
     const query = `SELECT username
     FROM user
     INNER JOIN foeship
         ON foeship.foe_id = user.id
     WHERE foeship.user_id = ?`;
-    connection.query(query, [userId], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-        let foes = [];
-        results.forEach(row => {
-            foes.push(row.username);
-        });
-        return foes;
+    const [results, fields] = await connection.query(query, [userId]);
+    let foes = [];
+    results.forEach(row => {
+        foes.push(row.username);
     });
+    return foes;
 }
 
-function removeFriend(userId, friendName) {
+async function removeFriend(userId, friendName) {
     const query = `DELETE friendship 
     FROM friendship
     INNER JOIN user
         ON friendship.friend_id = user.id
     WHERE friendship.user_id = ? AND user.username = ?`;
-    connection.query(query, [userId, friendName], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        return true;
-    });
-
+    const [results, fields] = await connection.query(query, [userId, friendName]);
+    return true;
 }
 
-function removeFoe(userId, foeName) {
+async function removeFoe(userId, foeName) {
     const query = `DELETE foeship 
     FROM foeship
     INNER JOIN user
         ON foeship.foe_id = user.id
     WHERE foeship.user_id = ? AND user.username = ?`;
-    connection.query(query, [userId, foeName], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        return true;
-    });
-
+    const [results, fields] = await connection.query(query, [userId, foeName]);
+    return true;
 }
 
-function addFriend(userId, friendName) {
+async function addFriend(userId, friendName) {
     const query = `INSERT INTO friendship (user_id, friend_id)
     SELECT ?, id
     FROM user
     WHERE username = ?;`
-    connection.query(query, [userId, friendName], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        return true;
-    });
+    const [results, fields] = await connection.query(query, [userId, friendName]);
+    return true;
 }
 
-function addFoe(userId, foeName) {
+async function addFoe(userId, foeName) {
     const query = `INSERT INTO foeship (user_id, foe_id)
     SELECT ?, id
     FROM user
     WHERE username = ?;`
-    connection.query(query, [userId, foeName], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        return true;
-    });
+    const [results, fields] = await connection.query(query, [userId, foeName]);
+    return true;
 }
