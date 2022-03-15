@@ -19,8 +19,7 @@ const responseTypes = {
     FRIENDS: 2,
     FOES: 3,
     ONLINE_PEOPLE: 4,
-    CHAT_HISTORY: 5,
-    ERROR: 6
+    ERROR: 5
 };
 const chatServer = new ws.WebSocketServer({
     port: 3001,
@@ -74,7 +73,6 @@ chatServer.on('connection', (ws, req) => {
                     userState.name = payload.username;
                     userState.friends = getFriends(userState.name);
                     userState.foes = getFoes(userState.name);
-                    userState.chatHistory = getChatHistory(userState.name);
                     ws.send(JSON.stringify({
                         "type": responseTypes.FRIENDS,
                         "payload": userState.friends
@@ -82,10 +80,6 @@ chatServer.on('connection', (ws, req) => {
                     ws.send(JSON.stringify({
                         "type": responseTypes.FOES,
                         "payload": userState.foes
-                    }));
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.CHAT_HISTORY,
-                        "payload": userState.chatHistory
                     }));
                 } catch (err) {
                     console.log(err);
@@ -235,19 +229,6 @@ function getFoes(userId) {
         ON foeship.foe_id = user.id
     WHERE foeship.user_id = ?`;
     connection.query(query, [userId], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        return results[0]
-    });
-}
-
-function getChatHistory(userId) {
-    const query = `SELECT sender_id, recipient_id, date
-    FROM chat_message
-    WHERE sender_id = ? OR recipient_id = ?`;
-    connection.query(query, [userId, userId], function queryCallback(error, results, fields) {
         if (error) {
             throw error;
         }
