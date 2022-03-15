@@ -57,7 +57,10 @@ app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
             "exp": Date.now() / 1000 + 30, // expires in 30 seconds
             "iat": Date.now() / 1000
         },
-        privateKeyRS256
+        privateKeyRS256,
+        {
+            algorithm: "RS256"
+        }
     );
     res.send(token);
     console.log(`Sent JWT: ${token}`);
