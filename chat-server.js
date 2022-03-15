@@ -4,7 +4,7 @@ const fs = require('fs');
 const mysql = require('mysql');
 const session = require('express-session');
 
-const MessageTypes = {
+const messageTypes = {
     AUTHENTICATOR: 0,
     MESSAGE: 1,
     ADD_FRIEND: 2,
@@ -13,7 +13,7 @@ const MessageTypes = {
     REMOVE_FOE: 5
 };
 
-const ResponseTypes = {
+const responseTypes = {
     AUTHENTICATED: 0,
     MESSAGE: 1,
     FRIENDS: 2,
@@ -66,9 +66,9 @@ chatServer.on('connection', (ws, req) => {
         const userState = sessions.get(ws);
         let message = JSON.parse(data);
         switch (message.type) {
-            case MessageTypes.AUTHENTICATOR:
+            case messageTypes.AUTHENTICATOR:
                 try {
-                    const payload = jwt.verify(message.payload, publicKeyRS256);
+                    const payload = jwt.verify(JSON.stringify(message.payload), publicKeyRS256);
                     userState.authenticated = true;
                     userState.id = payload.sub;
                     userState.name = payload.username;
@@ -76,22 +76,22 @@ chatServer.on('connection', (ws, req) => {
                     userState.foes = getFoes(userState.name);
                     userState.chatHistory = getChatHistory(userState.name);
                     ws.send(JSON.stringify({
-                        "type": ResponseTypes.FRIENDS,
+                        "type": responseTypes.FRIENDS,
                         "payload": userState.friends
                     }));
                     ws.send(JSON.stringify({
-                        "type": ResponseTypes.FOES,
+                        "type": responseTypes.FOES,
                         "payload": userState.foes
                     }));
                     ws.send(JSON.stringify({
-                        "type": ResponseTypes.CHAT_HISTORY,
+                        "type": responseTypes.CHAT_HISTORY,
                         "payload": userState.chatHistory
                     }));
                 } catch (err) {
                     console.log(err);
                 }
                 break;
-            case MessageTypes.MESSAGE:
+            case messageTypes.MESSAGE:
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to send message while unauthenticated.");
                 } else {
@@ -100,80 +100,80 @@ chatServer.on('connection', (ws, req) => {
                     sessions.forEach(state => {
                         if (state.name == recipient) {
                             ws.send(JSON.stringify({
-                                "type": ResponseTypes.MESSAGE,
+                                "type": responseTypes.MESSAGE,
                                 "payload": text
                             }));
                         }
                     });
                 }
                 break;
-            case MessageTypes.ADD_FRIEND:
+            case messageTypes.ADD_FRIEND:
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to add friend while unauthenticated.");
                 } else {
                     let success = addFriend(userState.name, message.payload);
                     if (success) {
                         ws.send(JSON.stringify({
-                            "type": ResponseTypes.FRIENDS,
+                            "type": responseTypes.FRIENDS,
                             "payload": userState.friends
                         }));
                     } else {
                         ws.send(JSON.strinfigy({
-                            "type": ResponseTypes.ERROR,
+                            "type": responseTypes.ERROR,
                             "payload": "Failed to add friend: " + message.payload
                         }));
                     }
                 }
                 break;
-            case MessageTypes.ADD_FOE:
+            case messageTypes.ADD_FOE:
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to add foe while unauthenticated.");
                 } else {
                     let success = addFoe(userState.name, message.payload);
                     if (success) {
                         ws.send(JSON.stringify({
-                            "type": ResponseTypes.FOES,
+                            "type": responseTypes.FOES,
                             "payload": userState.foes
                         }));
                     } else {
                         ws.send(JSON.strinfigy({
-                            "type": ResponseTypes.ERROR,
+                            "type": responseTypes.ERROR,
                             "payload": "Failed to add foe: " + message.payload
                         }));
                     }
                 }
                 break;
-            case MessageTypes.REMOVE_FRIEND:
+            case messageTypes.REMOVE_FRIEND:
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to remove friend while unauthenticated.");
                 } else {
                     let success = removeFriend(userState.name, message.payload);
                     if (success) {
                         ws.send(JSON.stringify({
-                            "type": ResponseTypes.FRIENDS,
+                            "type": responseTypes.FRIENDS,
                             "payload": userState.friends
                         }));
                     } else {
                         ws.send(JSON.strinfigy({
-                            "type": ResponseTypes.ERROR,
+                            "type": responseTypes.ERROR,
                             "payload": "Failed to remove friend: " + message.payload
                         }));
                     }
                 }
                 break;
-            case MessageTypes.REMOVE_FOE:
+            case messageTypes.REMOVE_FOE:
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to remove foe while unauthenticated.");
                 } else {
                     let success = removeFoe(userState.name, message.payload);
                     if (success) {
                         ws.send(JSON.stringify({
-                            "type": ResponseTypes.FOES,
+                            "type": responseTypes.FOES,
                             "payload": userState.foes
                         }));
                     } else {
                         ws.send(JSON.strinfigy({
-                            "type": ResponseTypes.ERROR,
+                            "type": responseTypes.ERROR,
                             "payload": "Failed to remove foe: " + message.payload
                         }));
                     }
@@ -201,7 +201,7 @@ const interval = setInterval(() => {
                 onlinePeople.push(userState.name);
             });
             ws.send(JSON.stringify({
-                "type": ResponseTypes.ONLINE_PEOPLE,
+                "type": responseTypes.ONLINE_PEOPLE,
                 "payload": onlinePeople
             }));
         }
