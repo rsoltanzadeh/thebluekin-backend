@@ -187,8 +187,6 @@ chatServer.on('connection', (ws, req) => {
     ws.on('close', () => {
         sessions.delete(ws);
     });
-
-    ws.send('Connection opened.');
 })
 
 const interval = setInterval(() => {
