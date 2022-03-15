@@ -298,7 +298,7 @@ async function addFoe(userId, foeName) {
     if((await getFoes(userId)).includes(foeName) || !foeId || foeId == userId) {
         return;
     }
-    removeFoe(userId, foeName);
+    removeFriend(userId, foeName);
     const query = `INSERT INTO foeship (user_id, foe_id)
     VALUES (?,?);`
     const [results, fields] = await connection.query(query, [userId, foeId]);
