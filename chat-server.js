@@ -219,7 +219,7 @@ function getFriends(userId) {
     INNER JOIN friendship
         ON friendship.friend_id = user.id
     WHERE friendship.user_id = ?`;
-    connection.query(query, [user], function queryCallback(error, results, fields) {
+    connection.query(query, [userId], function queryCallback(error, results, fields) {
         if (error) {
             throw error;
         }
@@ -234,7 +234,7 @@ function getFoes(userId) {
     INNER JOIN foeship
         ON foeship.foe_id = user.id
     WHERE foe.user_id = ?`;
-    connection.query(query, [user], function queryCallback(error, results, fields) {
+    connection.query(query, [userId], function queryCallback(error, results, fields) {
         if (error) {
             throw error;
         }
