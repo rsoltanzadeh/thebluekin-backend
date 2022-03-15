@@ -68,7 +68,7 @@ chatServer.on('connection', (ws, req) => {
         switch (message.type) {
             case messageTypes.AUTHENTICATOR:
                 try {
-                    const payload = jwt.verify(JSON.stringify(message.payload), publicKeyRS256);
+                    const payload = jwt.verify(message.payload, publicKeyRS256);
                     userState.authenticated = true;
                     userState.id = payload.sub;
                     userState.name = payload.username;

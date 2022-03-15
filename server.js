@@ -59,7 +59,7 @@ app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
         },
         privateKeyRS256
     );
-    res.send(JSON.stringify(token));
+    res.send(token);
 });
 
 app.post('/api/register', (req, res) => {
