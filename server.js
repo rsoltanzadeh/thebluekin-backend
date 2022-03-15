@@ -123,6 +123,15 @@ app.post('/api/register', (req, res) => {
     });
 });
 
+app.get('/api/check-auth', (req, res) => {
+    res.send(req.session.username ? true : false);
+});
+
+app.get('/api/logout', csrfProtection, (req, res) => {
+    req.session.destroy();
+    res.send('success');
+});
+
 app.post('/api/login', csrfProtection, (req, res) => {
     const reqUsername = req.body.username;
     const reqPassword = req.body.password;
