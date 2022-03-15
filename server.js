@@ -63,18 +63,14 @@ app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
         }
     );
     res.send(token);
-    console.log(`Sent JWT: ${token}`);
 });
 
 app.post('/api/register', (req, res) => {
-    let reqUsername, reqPassword, reqEmail;
-    try {
-        reqUsername = req.body.username;
-        reqPassword = req.body.password;
-        reqEmail = req.body.email;
-    } catch (e) {
-        console.log(e);
-        res.send("Received data in invalid format.");
+    const reqUsername = req.body.username;
+    const reqPassword = req.body.password;
+    const reqEmail = req.body.email;
+    if (!reqUsername || !reqPassword || !reqEmail) {
+        res.send("Received data in invalid format: " + JSON.stringify(req.body));
         return;
     }
 
@@ -129,18 +125,15 @@ app.post('/api/register', (req, res) => {
 });
 
 app.post('/api/login', csrfProtection, (req, res) => {
-    let reqUsername, reqPassword;
-    reqUsername = req.body.username;
-    reqPassword = req.body.password;
+    const reqUsername = req.body.username;
+    const reqPassword = req.body.password;
     if (!reqUsername || !reqPassword) {
-        console.log(e);
         res.send("Received data in invalid format: " + JSON.stringify(req.body));
         return;
     }
 
     connection.query('SELECT id, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
         if (error) {
-            console.log('f');
             throw error;
         }
         if (results.length > 1) {
@@ -149,25 +142,21 @@ app.post('/api/login', csrfProtection, (req, res) => {
             connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error2, results2, fields2) {
                 console.log(`Login failed for username ${reqUsername}.`);
                 if (error2) {
-                    console.log('d');
                     throw error2;
                 }
             });
         } else {
-            console.log("Results: " + JSON.stringify(results));
             let passwordHash = results[0].password;
             if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, passwordHash)) {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error2, results2, fields2) {
                     console.log(`Login succeeded for user ${reqUsername}.`);
                     if (error2) {
-                        console.log('a');
                         throw error2;
                     }
 
                     // prevent session fixation attack
                     req.session.regenerate(err => {
                         if (err) {
-                            console.log('b');
                             throw err;
                         }
                     })
@@ -179,7 +168,6 @@ app.post('/api/login', csrfProtection, (req, res) => {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
                     console.log(`Login failed for username ${reqUsername}.`);
                     if (error) {
-                        console.log('c');
                         throw error;
                     }
                 });
