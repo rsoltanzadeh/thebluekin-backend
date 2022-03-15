@@ -62,7 +62,7 @@ chatServer.on('connection', (ws, req) => {
     sessions.set(ws, { "authenticated": false })
     ws.on('message', data => {
         console.log('Received: %s', data);
-        const userState = sessions.get(ws);
+        let userState = sessions.get(ws);
         let message = JSON.parse(data);
         switch (message.type) {
             case messageTypes.AUTHENTICATOR:
