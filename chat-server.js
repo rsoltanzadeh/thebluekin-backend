@@ -89,6 +89,7 @@ chatServer.on('connection', (ws, req) => {
                     }));
                 } catch (err) {
                     console.log(err);
+                    console.log(message);
                 }
                 break;
             case messageTypes.MESSAGE:
