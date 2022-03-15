@@ -59,7 +59,12 @@ chatServer.on('connection', (ws, req) => {
     ws.isAlive = true;
     ws.on('pong', heartbeat);
 
-    sessions.set(ws, { "authenticated": false })
+    sessions.set(
+        ws,
+        {
+            "authenticated": false
+        }
+    );
     ws.on('message', data => {
         console.log('Received: %s', data);
         let userState = sessions.get(ws);
@@ -73,6 +78,7 @@ chatServer.on('connection', (ws, req) => {
                     userState.name = payload.username;
                     userState.friends = getFriends(userState.id);
                     userState.foes = getFoes(userState.id);
+                    console.log(`User state: ${userState}`);
                     ws.send(JSON.stringify({
                         "type": responseTypes.FRIENDS,
                         "payload": userState.friends
