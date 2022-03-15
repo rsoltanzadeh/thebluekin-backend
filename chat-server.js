@@ -125,7 +125,7 @@ chatServer.on('connection', (ws, req) => {
                             "payload": userState.friends
                         }));
                     } else {
-                        ws.send(JSON.strinfigy({
+                        ws.send(JSON.stringify({
                             "type": responseTypes.ERROR,
                             "payload": "Failed to add friend: " + message.payload
                         }));
@@ -144,7 +144,7 @@ chatServer.on('connection', (ws, req) => {
                             "payload": userState.foes
                         }));
                     } else {
-                        ws.send(JSON.strinfigy({
+                        ws.send(JSON.stringify({
                             "type": responseTypes.ERROR,
                             "payload": "Failed to add foe: " + message.payload
                         }));
@@ -163,7 +163,7 @@ chatServer.on('connection', (ws, req) => {
                             "payload": userState.friends
                         }));
                     } else {
-                        ws.send(JSON.strinfigy({
+                        ws.send(JSON.stringify({
                             "type": responseTypes.ERROR,
                             "payload": "Failed to remove friend: " + message.payload
                         }));
@@ -182,7 +182,7 @@ chatServer.on('connection', (ws, req) => {
                             "payload": userState.foes
                         }));
                     } else {
-                        ws.send(JSON.strinfigy({
+                        ws.send(JSON.stringify({
                             "type": responseTypes.ERROR,
                             "payload": "Failed to remove foe: " + message.payload
                         }));
