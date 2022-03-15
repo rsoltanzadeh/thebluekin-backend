@@ -29,17 +29,15 @@ const chatServer = new ws.WebSocketServer({
 const publicKeyRS256 = fs.readFileSync('../jwtRS256.key.pub');
 const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
 
-let connection;
-(async () => {
-    connection = await mysql.createConnection({
-        socketPath: '/var/lib/mysql/mysql.sock',
-        host: 'localhost',
-        user: sensitiveData.dbUsername,
-        password: sensitiveData.dbPassword,
-        database: 'mafia',
-        charset: 'utf8mb4'
-    });
-})();
+const connection = await mysql.createConnection({
+    socketPath: '/var/lib/mysql/mysql.sock',
+    host: 'localhost',
+    user: sensitiveData.dbUsername,
+    password: sensitiveData.dbPassword,
+    database: 'mafia',
+    charset: 'utf8mb4'
+});
+
 connection.connect(err => {
     if (err) {
         console.log("MySQL connection failed: " + err);
