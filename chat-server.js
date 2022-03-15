@@ -227,6 +227,9 @@ async function getId(username) {
     FROM user
     WHERE username = ?;`;
     const [results, fields] = await connection.execute(query, [username]);
+    if(!results.length) {
+        return false;
+    }
     return results[0].id;
 }
 
@@ -279,37 +282,25 @@ async function removeFoe(userId, foeName) {
 }
 
 async function addFriend(userId, friendName) {
-    if((await getFriends(userId)).includes(friendName) || (await getId(friendName)) == userId) {
+    const friendId = await getId(friendName);
+    if((await getFriends(userId)).includes(friendName) || !friendId || friendId == userId) {
         return;
     }
     removeFoe(userId, friendName);
     const query = `INSERT INTO friendship (user_id, friend_id)
-    VALUES (
-        ?,
-        (
-            SELECT id
-            FROM user
-            WHERE username = ?
-        ) 
-    );`
-    const [results, fields] = await connection.query(query, [userId, friendName]);
+    VALUES (?,?);`
+    const [results, fields] = await connection.query(query, [userId, friendId]);
     return true;
 }
 
 async function addFoe(userId, foeName) {
-    if((await getFoes(userId)).includes(foeName) || (await getId(foeName)) == userId) {
+    const foeId = await getId(foeName);
+    if((await getFoes(userId)).includes(foeName) || !foeId || foeId == userId) {
         return;
     }
-    removeFriend(userId, foeName);
+    removeFoe(userId, foeName);
     const query = `INSERT INTO foeship (user_id, foe_id)
-    VALUES (
-        ?,
-        (
-            SELECT id
-            FROM user
-            WHERE username = ?
-        ) 
-    );`
-    const [results, fields] = await connection.query(query, [userId, foeName]);
+    VALUES (?,?);`
+    const [results, fields] = await connection.query(query, [userId, foeId]);
     return true;
 }
