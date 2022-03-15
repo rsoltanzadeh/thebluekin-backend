@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
 const session = require('express-session');
+const { getDiffieHellman } = require('crypto');
 
 const messageTypes = {
     AUTHENTICATOR: 0,
@@ -78,8 +79,8 @@ chatServer.on('connection', (ws, req) => {
                 try {
                     const payload = jwt.verify(message.payload, publicKeyRS256);
                     userState.authenticated = true;
-                    userState.id = payload.sub;
-                    userState.name = payload.username;
+                    userState.name = payload.sub;
+                    userState.id = await getId(userState.name);
                     userState.friends = await getFriends(userState.id);
                     userState.foes = await getFoes(userState.id);
                     console.log(`User state: ${JSON.stringify(userState)}`);
@@ -220,6 +221,14 @@ const interval = setInterval(() => {
 chatServer.on('close', () => {
     clearInterval(interval);
 });
+
+async function getId(username) {
+    const query = `SELECT id
+    FROM user
+    WHERE username = ?;`;
+    const [results, fields] = await connection.execute(query, [username]);
+    return results[0];
+}
 
 async function getFriends(userId) {
     const query = `SELECT username

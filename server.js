@@ -51,8 +51,7 @@ app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
 
     const token = jwt.sign(
         {
-            "sub": req.session.id,
-            "username": req.session.username,
+            "sub": req.session.username,
             "aud": "chat",
             "exp": Date.now() / 1000 + 30, // expires in 30 seconds
             "iat": Date.now() / 1000
