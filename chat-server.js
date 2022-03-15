@@ -233,7 +233,7 @@ function getFoes(userId) {
     FROM user
     INNER JOIN foeship
         ON foeship.foe_id = user.id
-    WHERE foe.user_id = ?`;
+    WHERE foeship.user_id = ?`;
     connection.query(query, [userId], function queryCallback(error, results, fields) {
         if (error) {
             throw error;
