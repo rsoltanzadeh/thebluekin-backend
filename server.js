@@ -1,3 +1,5 @@
+console.log("Running server.js");
+
 const express = require('express');
 const session = require('express-session');
 const csrf = require('csurf');
@@ -7,13 +9,15 @@ const phpPassword = require('node-php-password');
 const validator = require('email-validator');
 const { exit } = require('process');
 const jwt = require('jsonwebtoken');
+const { MemoryStore } = require('express-session');
 const app = express();
 const csrfProtection = csrf();
 
-const privateKeyRS256 = fs.readFileSync('../jwtRS256.key');
-const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
+const paths = JSON.parse(fs.readFileSync('config/paths.json'));
+const privateKeyRS256 = fs.readFileSync(paths.privateKeyRS256);
+const sensitiveData = JSON.parse(fs.readFileSync(paths.sensitiveData));
 const connection = mysql.createConnection({
-    socketPath: '/var/lib/mysql/mysql.sock',
+    socketPath: paths.mySQLSocketPath,
     host: 'localhost',
     user: sensitiveData.dbUsername,
     password: sensitiveData.dbPassword,
@@ -29,15 +33,21 @@ connection.connect(err => {
 
 app.set('trust proxy', 1);
 app.use(express.json());
-app.use(session({
+
+const myStore = new MemoryStore();
+
+const mySession = session({
     cookie: {
-        secure: true
+        secure: false //change to true in production
     },
     secret: 'test secret',
     proxy: true,
     resave: false,
-    saveUninitialized: false
-}));
+    saveUninitialized: false,
+    store: myStore
+});
+
+app.use(mySession);
 
 app.get('/api/get-token', csrfProtection, (req, res) => {
     res.send(req.csrfToken());
@@ -168,10 +178,11 @@ app.post('/api/login', csrfProtection, (req, res) => {
                             throw err;
                         }
                     })
+
                     req.session.username = reqUsername;
                     req.session.userid = results[0].id;
                     res.send("success");
-                })
+                });
             } else {
                 connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
                     console.log(`Login failed for username ${reqUsername}.`);

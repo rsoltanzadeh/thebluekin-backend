@@ -1,9 +1,9 @@
+console.log("Running chat-server.js.");
+
 const ws = require('ws');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
-const session = require('express-session');
-const { getDiffieHellman } = require('crypto');
 
 const messageTypes = {
     AUTHENTICATOR: 0,
@@ -27,14 +27,15 @@ const chatServer = new ws.WebSocketServer({
     clientTracking: true
 });
 
-const publicKeyRS256 = fs.readFileSync('../jwtRS256.key.pub');
-const sensitiveData = JSON.parse(fs.readFileSync('../sensitive_data.json'));
+const paths = JSON.parse(fs.readFileSync('config/paths.json'));
+const publicKeyRS256 = fs.readFileSync(paths.publicKeyRS256);
+const sensitiveData = JSON.parse(fs.readFileSync(paths.sensitiveData));
 
 let connection;
 
 (async () => {
     connection = await mysql.createConnection({
-        socketPath: '/var/lib/mysql/mysql.sock',
+        socketPath: paths.mySQLSocketPath,
         host: 'localhost',
         user: sensitiveData.dbUsername,
         password: sensitiveData.dbPassword,
@@ -59,8 +60,6 @@ chatServer.on('upgrade', res => {
 
 })
 chatServer.on('connection', (ws, req) => {
-    console.log(req.headers);
-
     ws.isAlive = true;
     ws.on('pong', heartbeat);
 
@@ -71,7 +70,6 @@ chatServer.on('connection', (ws, req) => {
         }
     );
     ws.on('message', async data => {
-        console.log('Received: %s', data);
         let userState = sessions.get(ws);
         let message = JSON.parse(data);
         switch (message.type) {
@@ -83,7 +81,11 @@ chatServer.on('connection', (ws, req) => {
                     userState.id = await getId(userState.name);
                     userState.friends = await getFriends(userState.id);
                     userState.foes = await getFoes(userState.id);
-                    console.log(`User state: ${JSON.stringify(userState)}`);
+                    sessions.forEach((state, wsConn) => {
+                        if (state.name == userState.name && ws != wsConn) {
+                            wsConn.close(1008, "Another login detected.");
+                        }
+                    });
                     ws.send(JSON.stringify({
                         "type": responseTypes.FRIENDS,
                         "payload": userState.friends
@@ -103,11 +105,23 @@ chatServer.on('connection', (ws, req) => {
                 } else {
                     const recipient = message.payload.recipient;
                     const text = message.payload.text;
-                    sessions.forEach(state => {
+                    sessions.forEach((state, wsConnection) => {
                         if (state.name == recipient) {
+                            wsConnection.send(JSON.stringify({
+                                "type": responseTypes.MESSAGE,
+                                "payload": {
+                                    "text": text,
+                                    "author": userState.name,
+                                    "windowName": userState.name
+                                }
+                            }));
                             ws.send(JSON.stringify({
                                 "type": responseTypes.MESSAGE,
-                                "payload": text
+                                "payload": {
+                                    "text": text,
+                                    "author": "",
+                                    "windowName": recipient
+                                }
                             }));
                         }
                     });
@@ -227,7 +241,7 @@ async function getId(username) {
     FROM user
     WHERE username = ?;`;
     const [results, fields] = await connection.execute(query, [username]);
-    if(!results.length) {
+    if (!results.length) {
         return false;
     }
     return results[0].id;
@@ -283,7 +297,7 @@ async function removeFoe(userId, foeName) {
 
 async function addFriend(userId, friendName) {
     const friendId = await getId(friendName);
-    if((await getFriends(userId)).includes(friendName) || !friendId || friendId == userId) {
+    if ((await getFriends(userId)).includes(friendName) || !friendId || friendId == userId) {
         return;
     }
     removeFoe(userId, friendName);
@@ -295,7 +309,7 @@ async function addFriend(userId, friendName) {
 
 async function addFoe(userId, foeName) {
     const foeId = await getId(foeName);
-    if((await getFoes(userId)).includes(foeName) || !foeId || foeId == userId) {
+    if ((await getFoes(userId)).includes(foeName) || !foeId || foeId == userId) {
         return;
     }
     removeFriend(userId, foeName);
