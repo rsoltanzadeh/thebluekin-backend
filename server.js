@@ -74,6 +74,27 @@ app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
     res.send(token);
 });
 
+app.get('/api/get-game-jwt', csrfProtection, (req, res) => {
+    if (!req.session.username) {
+        res.send("Unauthorized.");
+        return;
+    }
+
+    const token = jwt.sign(
+        {
+            "sub": req.session.username,
+            "aud": "game",
+            "exp": Date.now() / 1000 + 30, // expires in 30 seconds
+            "iat": Date.now() / 1000
+        },
+        privateKeyRS256,
+        {
+            algorithm: "RS256"
+        }
+    );
+    res.send(token);
+});
+
 app.post('/api/register', (req, res) => {
     const reqUsername = req.body.username;
     const reqPassword = req.body.password;
@@ -129,6 +150,7 @@ app.post('/api/register', (req, res) => {
         if (error) {
             throw error;
         }
+        req.session.cookie.username = reqUsername;
         res.send("success");
     });
 });
