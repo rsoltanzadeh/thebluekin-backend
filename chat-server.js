@@ -216,7 +216,7 @@ chatServer.on('connection', (ws, req) => {
 const interval = setInterval(() => {
     chatServer.clients.forEach(ws => {
         if (!ws.isAlive) {
-            ws.terminate();
+            ws.close();
         } else {
             ws.isAlive = false;
             ws.ping();
