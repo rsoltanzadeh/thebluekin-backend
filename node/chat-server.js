@@ -222,7 +222,9 @@ const interval = setInterval(() => {
             ws.ping();
             let onlinePeople = [];
             sessions.forEach(userState => {
-                onlinePeople.push(userState.name);
+                if(userState.name) {
+                    onlinePeople.push(userState.name);
+                }
             });
             ws.send(JSON.stringify({
                 "type": responseTypes.ONLINE_PEOPLE,
