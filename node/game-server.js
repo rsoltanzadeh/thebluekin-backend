@@ -70,10 +70,17 @@ gameServer.on('connection', (ws, req) => {
             case messageTypes.AUTHENTICATOR:
                 try {
                     const payload = jwt.verify(message.payload, publicKeyRS256);
+                    if(payload.aud != "game") {
+                        ws.close(1008, `Wrong JWT audience: ${payload.aud}. Expected "game".`);
+                        return;
+                    }
                     userState.authenticated = true;
                     userState.name = payload.sub;
                     userState.id = await getId(userState.name);
                     players[userState.name] = [0, 0];
+                    ws.send(JSON.stringify({
+                        "type": responseTypes.AUTHENTICATED
+                    }));
                     sessions.forEach((state, wsConn) => {
                         if (state.name == userState.name && ws != wsConn) {
                             wsConn.close(1008, "Another login detected.");

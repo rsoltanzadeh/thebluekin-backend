@@ -76,6 +76,10 @@ chatServer.on('connection', (ws, req) => {
             case messageTypes.AUTHENTICATOR:
                 try {
                     const payload = jwt.verify(message.payload, publicKeyRS256);
+                    if(payload.aud != "chat") {
+                        ws.close(1008, `Wrong JWT audience: ${payload.aud}. Expected "chat".`);
+                        return;
+                    }
                     userState.authenticated = true;
                     userState.name = payload.sub;
                     userState.id = await getId(userState.name);
@@ -86,6 +90,9 @@ chatServer.on('connection', (ws, req) => {
                             wsConn.close(1008, "Another login detected.");
                         }
                     });
+                    ws.send(JSON.stringify({
+                        "type": responseTypes.AUTHENTICATED
+                    }));
                     ws.send(JSON.stringify({
                         "type": responseTypes.FRIENDS,
                         "payload": userState.friends
