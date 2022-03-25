@@ -27,7 +27,7 @@ const chatServer = new ws.WebSocketServer({
     clientTracking: true
 });
 
-const paths = JSON.parse(fs.readFileSync('config/paths.json'));
+const paths = JSON.parse(fs.readFileSync('../config/paths.json'));
 const publicKeyRS256 = fs.readFileSync(paths.publicKeyRS256);
 const sensitiveData = JSON.parse(fs.readFileSync(paths.sensitiveData));
 

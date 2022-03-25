@@ -13,7 +13,7 @@ const { MemoryStore } = require('express-session');
 const app = express();
 const csrfProtection = csrf();
 
-const paths = JSON.parse(fs.readFileSync('config/paths.json'));
+const paths = JSON.parse(fs.readFileSync('../config/paths.json'));
 const privateKeyRS256 = fs.readFileSync(paths.privateKeyRS256);
 const sensitiveData = JSON.parse(fs.readFileSync(paths.sensitiveData));
 const connection = mysql.createConnection({
