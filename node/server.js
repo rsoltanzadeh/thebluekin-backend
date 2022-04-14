@@ -4,7 +4,7 @@ const express = require('express');
 const session = require('express-session');
 const csrf = require('csurf');
 const fs = require('fs');
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 const phpPassword = require('node-php-password');
 const validator = require('email-validator');
 const { exit } = require('process');
@@ -16,19 +16,13 @@ const csrfProtection = csrf();
 const paths = JSON.parse(fs.readFileSync('../config/paths.json'));
 const privateKeyRS256 = fs.readFileSync(paths.privateKeyRS256);
 const sensitiveData = JSON.parse(fs.readFileSync(paths.sensitiveData));
-const connection = mysql.createConnection({
+const connectionPool = mysql.createPool({
     socketPath: paths.mySQLSocketPath,
     host: 'localhost',
     user: sensitiveData.dbUsername,
     password: sensitiveData.dbPassword,
     database: 'mafia',
     charset: 'utf8mb4'
-});
-
-connection.connect(err => {
-    if (err) {
-        console.log("MySQL connection failed: " + err);
-    }
 });
 
 app.set('trust proxy', 1);
@@ -95,7 +89,7 @@ app.get('/api/get-game-jwt', csrfProtection, (req, res) => {
     res.send(token);
 });
 
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const reqUsername = req.body.username;
     const reqPassword = req.body.password;
     const reqEmail = req.body.email;
@@ -124,35 +118,21 @@ app.post('/api/register', (req, res) => {
         return;
     }
 
-    connection.query('SELECT id FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        if (results.length > 0) {
-            res.send('Username already exists.');
-            return;
-        }
-    });
-    connection.query('SELECT id FROM user WHERE email = ?', [reqEmail], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-
-        if (results.length > 0) {
-            res.send('E-mail already exists.');
-            return;
-        }
-    });
+    [results, fields] = await connectionPool.query('SELECT id FROM user WHERE username = ?', [reqUsername]);
+    if (results.length > 0) {
+        res.send('Username already exists.');
+        return;
+    }
+    [results, fields] = await connectionPool.query('SELECT id FROM user WHERE email = ?', [reqEmail]);
+    if (results.length > 0) {
+        res.send('E-mail already exists.');
+        return;
+    }
 
     let newPassword = phpPassword.hash(sensitiveData.dbPepper + reqPassword);
-    connection.query('INSERT INTO user (username, email, password) VALUES (?,?,?)', [reqUsername, reqEmail, newPassword], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-        req.session.cookie.username = reqUsername;
-        res.send("success");
-    });
+    [results, fields] = await connectionPool.query('INSERT INTO user (username, email, password) VALUES (?,?,?)', [reqUsername, reqEmail, newPassword]);
+    req.session.cookie.username = reqUsername;
+    res.send("success");
 });
 
 app.get('/api/check-auth', (req, res) => {
@@ -164,7 +144,7 @@ app.get('/api/logout', csrfProtection, (req, res) => {
     res.send('success');
 });
 
-app.post('/api/login', csrfProtection, (req, res) => {
+app.post('/api/login', csrfProtection, async (req, res) => {
     const reqUsername = req.body.username;
     const reqPassword = req.body.password;
     if (!reqUsername || !reqPassword) {
@@ -172,49 +152,33 @@ app.post('/api/login', csrfProtection, (req, res) => {
         return;
     }
 
-    connection.query('SELECT id, password FROM user WHERE username = ?', [reqUsername], function queryCallback(error, results, fields) {
-        if (error) {
-            throw error;
-        }
-        if (results.length > 1) {
-            throw `Duplicate entry for username ${reqUsername}.`;
-        } else if (results.length == 0) {
-            connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error2, results2, fields2) {
-                console.log(`Login failed for username ${reqUsername}.`);
-                if (error2) {
-                    throw error2;
+    [results, fields] = await connectionPool.query('SELECT id, password FROM user WHERE username = ?', [reqUsername]);
+    if (results.length > 1) {
+        throw `Duplicate entry for username ${reqUsername}.`;
+    } else if (results.length == 0) {
+        [results2, fields2] = await connectionPool.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false]);
+        console.log(`Login failed for username ${reqUsername}.`);
+    } else {
+        let passwordHash = results[0].password;
+        if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, passwordHash)) {
+            [results2, fields2] = await connectionPool.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true]);
+            console.log(`Login succeeded for user ${reqUsername}.`);
+
+            // prevent session fixation attack
+            req.session.regenerate(err => {
+                if (err) {
+                    throw err;
                 }
-            });
+            })
+
+            req.session.username = reqUsername;
+            req.session.userid = results[0].id;
+            res.send("success");
         } else {
-            let passwordHash = results[0].password;
-            if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, passwordHash)) {
-                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, true], function queryCallback(error2, results2, fields2) {
-                    console.log(`Login succeeded for user ${reqUsername}.`);
-                    if (error2) {
-                        throw error2;
-                    }
-
-                    // prevent session fixation attack
-                    req.session.regenerate(err => {
-                        if (err) {
-                            throw err;
-                        }
-                    })
-
-                    req.session.username = reqUsername;
-                    req.session.userid = results[0].id;
-                    res.send("success");
-                });
-            } else {
-                connection.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false], function queryCallback(error, results, fields) {
-                    console.log(`Login failed for username ${reqUsername}.`);
-                    if (error) {
-                        throw error;
-                    }
-                });
-            }
+            [results, fields] = await connectionPool.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false]);
+            console.log(`Login failed for username ${reqUsername}.`);
         }
-    });
+    }
 });
 
 app.listen(4001);

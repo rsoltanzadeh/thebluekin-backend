@@ -24,23 +24,17 @@ const paths = JSON.parse(fs.readFileSync('../config/paths.json'));
 const publicKeyRS256 = fs.readFileSync(paths.publicKeyRS256);
 const sensitiveData = JSON.parse(fs.readFileSync(paths.sensitiveData));
 
-let connection;
+let connectionPool;
 let players = {};
 
 (async () => {
-    connection = await mysql.createConnection({
+    connectionPool = await mysql.createConnection({
         socketPath: paths.mySQLSocketPath,
         host: 'localhost',
         user: sensitiveData.dbUsername,
         password: sensitiveData.dbPassword,
         database: 'mafia',
         charset: 'utf8mb4'
-    });
-
-    connection.connect(err => {
-        if (err) {
-            console.log("MySQL connection failed: " + err);
-        }
     });
 })();
 
@@ -70,7 +64,7 @@ gameServer.on('connection', (ws, req) => {
             case messageTypes.AUTHENTICATOR:
                 try {
                     const payload = jwt.verify(message.payload, publicKeyRS256);
-                    if(payload.aud != "game") {
+                    if (payload.aud != "game") {
                         ws.close(1008, `Wrong JWT audience: ${payload.aud}. Expected "game".`);
                         return;
                     }
@@ -106,16 +100,16 @@ gameServer.on('connection', (ws, req) => {
 
                 switch (message.payload) {
                     case "LEFT":
-                        players[userState.name] = [Math.max(0, xPos-1), yPos];
+                        players[userState.name] = [Math.max(0, xPos - 1), yPos];
                         break;
                     case "RIGHT":
-                        players[userState.name] = [Math.min(20, xPos+1), yPos];
+                        players[userState.name] = [Math.min(20, xPos + 1), yPos];
                         break;
                     case "UP":
-                        players[userState.name] = [xPos, Math.max(0, yPos-1)];
+                        players[userState.name] = [xPos, Math.max(0, yPos - 1)];
                         break;
                     case "DOWN":
-                        players[userState.name] = [xPos, Math.min(20, yPos+1)];
+                        players[userState.name] = [xPos, Math.min(20, yPos + 1)];
                         break;
                     default:
                         ws.close(1008, "Received invalid direction: " + message.payload);
@@ -135,10 +129,12 @@ gameServer.on('connection', (ws, req) => {
     ws.on('close', () => {
         delete players[sessions.get(ws).name];
         sessions.delete(ws);
-        ws.send(JSON.stringify({
-            "type": responseTypes.PLAYERS,
-            "payload": players
-        }));
+        sessions.forEach((state, wsConnection) => {
+            wsConnection.send(JSON.stringify({
+                "type": responseTypes.PLAYERS,
+                "payload": players
+            }));
+        });
     });
 })
 
@@ -161,7 +157,7 @@ async function getId(username) {
     const query = `SELECT id
     FROM user
     WHERE username = ?;`;
-    const [results, fields] = await connection.execute(query, [username]);
+    const [results, fields] = await connectionPool.query(query, [username]);
     if (!results.length) {
         return false;
     }

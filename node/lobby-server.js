@@ -1,4 +1,4 @@
-console.log("Running chat-server.js.");
+console.log("Running lobby-server.js.");
 
 const ws = require('ws');
 const jwt = require('jsonwebtoken');
@@ -7,25 +7,16 @@ const mysql = require('mysql2/promise');
 
 const messageTypes = {
     AUTHENTICATOR: 0,
-    MESSAGE: 1,
-    ADD_FRIEND: 2,
-    ADD_FOE: 3,
-    REMOVE_FRIEND: 4,
-    REMOVE_FOE: 5,
-    DISMISS_FRIEND_REQUEST: 6
+    MESSAGE: 1
 };
 
 const responseTypes = {
     AUTHENTICATED: 0,
-    MESSAGE: 1,
-    FRIENDS: 2,
-    FOES: 3,
-    ONLINE_PEOPLE: 4,
-    ERROR: 5,
-    FRIEND_REQUESTS: 6
+    ERROR: 1
 };
-const chatServer = new ws.WebSocketServer({
-    port: 3001,
+
+const lobbyServer = new ws.WebSocketServer({
+    port: 3003,
     clientTracking: true
 });
 
@@ -51,11 +42,13 @@ function heartbeat() {
 }
 
 const sessions = new Map();
+const rooms = new Map();
+let roomCount = 0; // counter that only increases; used as ID for rooms
 
-chatServer.on('upgrade', res => {
+lobbyServer.on('upgrade', res => {
 
 })
-chatServer.on('connection', (ws, req) => {
+lobbyServer.on('connection', (ws, req) => {
     ws.isAlive = true;
     ws.on('pong', heartbeat);
 
@@ -73,8 +66,8 @@ chatServer.on('connection', (ws, req) => {
                 let payload;
                 try {
                     payload = jwt.verify(message.payload, publicKeyRS256);
-                    if (payload.aud != "chat") {
-                        ws.close(1008, `Wrong JWT audience: ${payload.aud}. Expected "chat".`);
+                    if (payload.aud != "lobby") {
+                        ws.close(1008, `Wrong JWT audience: ${payload.aud}. Expected "lobby".`);
                         break;
                     }
                 } catch (err) {
@@ -85,9 +78,6 @@ chatServer.on('connection', (ws, req) => {
                 userState.authenticated = true;
                 userState.name = payload.sub;
                 userState.id = await getId(userState.name);
-                userState.friends = await getFriends(userState.id);
-                userState.foes = await getFoes(userState.id);
-                userState.friendRequests = await getFriendRequests(userState.id);
                 sessions.forEach((state, wsConn) => {
                     if (state.name == userState.name && ws != wsConn) {
                         wsConn.close(1008, "Another login detected.");
@@ -96,182 +86,106 @@ chatServer.on('connection', (ws, req) => {
                 ws.send(JSON.stringify({
                     "type": responseTypes.AUTHENTICATED
                 }));
-                ws.send(JSON.stringify({
-                    "type": responseTypes.FRIENDS,
-                    "payload": userState.friends
-                }));
-                ws.send(JSON.stringify({
-                    "type": responseTypes.FOES,
-                    "payload": userState.foes
-                }));
-                ws.send(JSON.stringify({
-                    "type": responseTypes.FRIEND_REQUESTS,
-                    "payload": userState.friendRequests
-                }));
                 break;
             case messageTypes.MESSAGE:
                 if (!userState.authenticated) {
                     ws.close(1008, "Attempt to send message while unauthenticated.");
                     break;
                 }
-                const recipient = message.payload.recipient;
+
+                if (!userState.roomId) {
+                    ws.send(JSON.stringify({
+                        "type": responseTypes.ERROR,
+                        "payload": "Cannot send message when not in a room."
+                    }));
+                    break;
+                }
+
                 const text = message.payload.text;
                 sessions.forEach((state, wsConnection) => {
-                    if (state.name == recipient) {
+                    if (state.roomId == userState.roomId) {
                         wsConnection.send(JSON.stringify({
                             "type": responseTypes.MESSAGE,
                             "payload": {
                                 "text": text,
-                                "author": userState.name,
-                                "windowName": userState.name
+                                "author": userState.name
                             }
                         }));
                         ws.send(JSON.stringify({
                             "type": responseTypes.MESSAGE,
                             "payload": {
                                 "text": text,
-                                "author": "",
-                                "windowName": recipient
+                                "author": ""
                             }
                         }));
                     }
                 });
                 break;
-            case messageTypes.ADD_FRIEND:
+            case messageTypes.CREATE_ROOM:
                 if (!userState.authenticated) {
-                    ws.close(1008, "Attempt to add friend while unauthenticated.");
+                    ws.close(1008, "Attempt to create room while unauthenticated.");
                     break;
                 }
 
-                if (userState.friends.includes(message.payload)) {
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.ERROR,
-                        "payload": "Cannot request friendship of current friend: " + message.payload
-                    }));
-                    break;
-                }
+                // leave current room
+                if (userState.roomId) {
+                    let userRoom = rooms.get(roomId);
+                    userRoom.delete(userState.id);
+                    userState.roomId = null;
 
-                if (userState.friendRequests.includes(message.payload)) { // other party also wants to be friends
-                    if (await addFriend(userState.id, message.payload)) {
-                        userState.friends = await getFriends(userState.id);
-                        userState.friendRequests = await getFriendRequests(userState.id);
-
-                        ws.send(JSON.stringify({
-                            "type": responseTypes.FRIENDS,
-                            "payload": userState.friends
-                        }));
-                        ws.send(JSON.stringify({
-                            "type": responseTypes.FRIEND_REQUESTS,
-                            "payload": userState.friendRequests
-                        }));
-                        ws.send(JSON.stringify({
-                            "type": responseTypes.FOES,
-                            "payload": userState.foes
-                        }));
-                    } else {
-                        ws.send(JSON.stringify({
-                            "type": responseTypes.ERROR,
-                            "payload": "Failed to add friend: " + message.payload
-                        }));
-                    }
-                    sessions.forEach(async (state, wsConnection) => {
-                        if (state.name == message.payload) {
-                            state.friends = await getFriends(state.id);
-                            wsConnection.send(JSON.stringify({
-                                "type": responseTypes.FRIENDS,
-                                "payload": state.friends
-                            }));
-                        }
-                    });
-                } else { // other party has not yet expressed interest in friendship
-                    if (await addFriendRequest(userState.id, message.payload)) {
-                        sessions.forEach(async (state, wsConnection) => {
-                            if (state.name == message.payload) {
-                                state.friendRequests = await getFriendRequests(state.id);
-                                state.friends = await getFriends(state.id);
-                                wsConnection.send(JSON.stringify({
-                                    "type": responseTypes.FRIEND_REQUESTS,
-                                    "payload": state.friendRequests
-                                }));
-                            }
-                        });
-                    } else {
-                        ws.send(JSON.stringify({
-                            "type": responseTypes.ERROR,
-                            "payload": "Failed to add friend request: " + message.payload
-                        }));
+                    if (userRoom.size == 0) {
+                        // room is destroyed when there are no people in it
+                        rooms.delete(roomId);
                     }
                 }
-                break;
-            case messageTypes.ADD_FOE:
-                if (!userState.authenticated) {
-                    ws.close(1008, "Attempt to add foe while unauthenticated.");
-                    break;
-                }
-                if (await addFoe(userState.id, message.payload)) {
-                    userState.foes = await getFoes(userState.id);
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.FOES,
-                        "payload": userState.foes
-                    }));
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.FRIENDS,
-                        "payload": userState.friends
-                    }));
-                } else {
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.ERROR,
-                        "payload": "Failed to add foe: " + message.payload
-                    }));
-                }
-                break;
-            case messageTypes.REMOVE_FRIEND:
-                if (!userState.authenticated) {
-                    ws.close(1008, "Attempt to remove friend while unauthenticated.");
-                    break;
-                }
-                if (await removeFriend(userState.id, message.payload)) {
-                    userState.friends = await getFriends(userState.id);
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.FRIENDS,
-                        "payload": userState.friends
-                    }));
-                } else {
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.ERROR,
-                        "payload": "Failed to remove friend: " + message.payload
-                    }));
-                }
-                break;
-            case messageTypes.REMOVE_FOE:
-                if (!userState.authenticated) {
-                    ws.close(1008, "Attempt to remove foe while unauthenticated.");
-                    break;
-                }
-                if (await removeFoe(userState.id, message.payload)) {
-                    userState.foes = await getFoes(userState.id);
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.FOES,
-                        "payload": userState.foes
-                    }));
-                } else {
-                    ws.send(JSON.stringify({
-                        "type": responseTypes.ERROR,
-                        "payload": "Failed to remove foe: " + message.payload
-                    }));
-                }
-                break;
-            case messageTypes.DISMISS_FRIEND_REQUEST:
-                if (!userState.authenticated) {
-                    ws.close(1008, "Attempt to dismiss friend request while unauthenticated.");
-                    break;
-                }
+
+                userState.roomId = ++roomCount;
+                rooms.set(userState.roomId, [userState.id]);
+
                 ws.send(JSON.stringify({
-                    "type": responseTypes.FRIEND_REQUESTS,
-                    "payload": userState.friendRequests
+                    "type": responseTypes.ROOM,
+                    "payload": rooms.get(userState.roomId)
                 }));
 
+                sessions.forEach((state, wsConn) => {
+                    wsConn.send(JSON.stringify({
+                        "type": responseTypes.ROOMS,
+                        "payload": JSON.stringify(rooms.keys())
+                    }));
+                });
                 break;
+            case messageTypes.JOIN_ROOM:
+                if (!userState.authenticated) {
+                    ws.close(1008, "Attempt to create room while unauthenticated.");
+                    break;
+                }
+
+                if(!rooms.has(message.payload)) {
+                    ws.send(JSON.stringify({
+                        "type": responseTypes.ERROR,
+                        "payload": "Cannot join a room that doesn't exist."
+                    }));
+                }
+
+                // leave current room
+                if (userState.roomId) {
+                    let userRoom = rooms.get(roomId);
+                    userRoom.delete(userState.id);
+                    userState.roomId = null;
+
+                    if (userRoom.size == 0) {
+                        // room is destroyed when there are no people in it
+                        rooms.delete(roomId);
+                    }
+                }
+
+                userState.roomId = message.payload;
+
+                ws.send(JSON.stringify({
+                    "type": responseTypes.ROOM,
+                    "payload": rooms.get(userState.roomId)
+                }));
+                
             default:
                 ws.close(1008, "Received payload of invalid type: " + message.type);
         }
@@ -283,7 +197,7 @@ chatServer.on('connection', (ws, req) => {
 })
 
 const interval = setInterval(() => {
-    chatServer.clients.forEach(ws => {
+    lobbyServer.clients.forEach(ws => {
         if (!ws.isAlive) {
             ws.close();
         } else {
@@ -303,7 +217,7 @@ const interval = setInterval(() => {
     });
 }, 10000);
 
-chatServer.on('close', () => {
+lobbyServer.on('close', () => {
     clearInterval(interval);
 });
 
