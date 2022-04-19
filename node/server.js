@@ -47,6 +47,27 @@ app.get('/api/get-token', csrfProtection, (req, res) => {
     res.send(req.csrfToken());
 });
 
+app.get('/api/get-lobby-jwt', csrfProtection, (req, res) => {
+    if (!req.session.username) {
+        res.send("Unauthorized.");
+        return;
+    }
+
+    const token = jwt.sign(
+        {
+            "sub": req.session.username,
+            "aud": "lobby",
+            "exp": Date.now() / 1000 + 30, // expires in 30 seconds
+            "iat": Date.now() / 1000
+        },
+        privateKeyRS256,
+        {
+            algorithm: "RS256"
+        }
+    );
+    res.send(token);
+});
+
 app.get('/api/get-chat-jwt', csrfProtection, (req, res) => {
     if (!req.session.username) {
         res.send("Unauthorized.");
