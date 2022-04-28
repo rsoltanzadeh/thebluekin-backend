@@ -179,6 +179,7 @@ app.post('/api/login', csrfProtection, async (req, res) => {
     } else if (results.length == 0) {
         [results2, fields2] = await connectionPool.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false]);
         console.log(`Login failed for username ${reqUsername}.`);
+        res.send("Wrong credentials."); // user doesn't exist
     } else {
         let passwordHash = results[0].password;
         if (phpPassword.verify(sensitiveData.dbPepper + reqPassword, passwordHash)) {
@@ -198,6 +199,7 @@ app.post('/api/login', csrfProtection, async (req, res) => {
         } else {
             [results, fields] = await connectionPool.query('INSERT INTO login (username, success) VALUES (?,?)', [reqUsername, false]);
             console.log(`Login failed for username ${reqUsername}.`);
+            res.send("Wrong credentials."); // wrong password
         }
     }
 });

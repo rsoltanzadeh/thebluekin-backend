@@ -191,6 +191,10 @@ lobbyServer.on('connection', (ws, req) => {
                 let roomId = userState.roomId;                    
                 userState.roomId = null;
                 sendRoomUpdate(roomId);
+                ws.send(JSON.stringify({
+                    "type": responseTypes.ROOM,
+                    "payload": {}
+                }));
                 break;
             }
             default:
